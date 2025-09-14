@@ -1,0 +1,17 @@
+name: 'MVC_dbt_local'
+version: '1.0.0'
+config-version: 2
+
+profile: 'MVC_dbt_local'
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  MVC_dbt_local:
+    MVC_summarize:
+      +materialized: table
+      +schema: MVC_summarize

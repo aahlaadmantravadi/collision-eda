@@ -1,0 +1,13 @@
+prefect-version: 2.7.7
+name: nyc-collision-pipeline
+prefect-version: 2.7.7
+
+deployments:
+  - name: MVC_flow
+    flow_path: pipeline.py
+    entrypoint: pipeline.py:MVC_main
+    work_queue_name: default
+    parameters:
+      data_type: "C"
+      years:
+        - 2023

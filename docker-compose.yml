@@ -1,0 +1,38 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - .:/workspace:cached
+    command: sleep infinity
+    depends_on:
+      - pgdatabase
+
+  pgdatabase:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=MVC_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  metabase-app:
+    image: metabase/metabase:v0.45.1
+    ports:
+      - "3001:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: MVC_db
+      MB_DB_PORT: 5432
+      MB_DB_USER: root
+      MB_DB_PASS: root
+      MB_DB_HOST: pgdatabase
+    depends_on:
+      - pgdatabase
+
+volumes:
+  pg_data:
