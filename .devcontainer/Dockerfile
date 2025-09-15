@@ -1,5 +1,5 @@
-
-FROM mcr.microsoft.com/devcontainers/python:3.9
+# Use the stable "Bullseye" version of the Python 3.9 dev container image
+FROM mcr.microsoft.com/devcontainers/python:3.9-bullseye
 
 # Set the working directory
 WORKDIR /workspace
@@ -8,7 +8,6 @@ WORKDIR /workspace
 USER vscode
 
 # Copy requirements and install python packages
-# This will now correctly find requirements.txt in the root of the project
 COPY --chown=vscode:vscode requirements.txt .
 RUN pip install --user -r requirements.txt
 ENV PATH="/home/vscode/.local/bin:${PATH}"

@@ -1,0 +1,22 @@
+[0m08:23:55.746673 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7eafe9a9cd90>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7eafe84a3d00>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7eafe84a3d90>]}
+
+
+============================== 08:23:55.753968 | fe10b417-019e-4fe3-92e6-0b8f9d3a7105 ==============================
+[0m08:23:55.753968 [info ] [MainThread]: Running with dbt=1.5.0
+[0m08:23:55.754763 [debug] [MainThread]: running dbt with arguments {'use_experimental_parser': 'False', 'partial_parse': 'True', 'log_format': 'default', 'fail_fast': 'False', 'warn_error_options': 'WarnErrorOptions(include=[], exclude=[])', 'warn_error': 'None', 'printer_width': '80', 'log_cache_events': 'False', 'static_parser': 'True', 'no_print': 'None', 'write_json': 'True', 'use_colors': 'True', 'profiles_dir': '/workspaces/collision-eda/dbt', 'send_anonymous_usage_stats': 'True', 'version_check': 'True', 'log_path': '/workspaces/collision-eda/dbt/logs', 'debug': 'False', 'indirect_selection': 'eager', 'quiet': 'False', 'cache_selected_only': 'False', 'introspect': 'True', 'target_path': 'None'}
+[0m08:23:55.810290 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': 'fe10b417-019e-4fe3-92e6-0b8f9d3a7105', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7eafe84a3d90>]}
+[0m08:23:55.811263 [info ] [MainThread]: Warning: No packages were found in packages.yml
+[0m08:23:55.813499 [debug] [MainThread]: Command `dbt deps` succeeded at 08:23:55.812696 after 0.08 seconds
+[0m08:23:55.814102 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7eafe9a9cd90>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7eafe83fcfd0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7eafe83fabe0>]}
+[0m08:23:55.814681 [debug] [MainThread]: Flushing usage events
+[0m09:14:51.073547 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974fa16400>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974e421d00>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974e421550>]}
+
+
+============================== 09:14:51.081102 | 07c97b6c-0f8c-43ad-a249-85cd49bcef61 ==============================
+[0m09:14:51.081102 [info ] [MainThread]: Running with dbt=1.5.0
+[0m09:14:51.081916 [debug] [MainThread]: running dbt with arguments {'printer_width': '80', 'fail_fast': 'False', 'use_experimental_parser': 'False', 'send_anonymous_usage_stats': 'True', 'version_check': 'True', 'introspect': 'True', 'no_print': 'None', 'use_colors': 'True', 'debug': 'False', 'quiet': 'False', 'log_format': 'default', 'cache_selected_only': 'False', 'warn_error': 'None', 'warn_error_options': 'WarnErrorOptions(include=[], exclude=[])', 'write_json': 'True', 'log_cache_events': 'False', 'target_path': 'None', 'partial_parse': 'True', 'indirect_selection': 'eager', 'log_path': '/workspaces/collision-eda/dbt/logs', 'profiles_dir': '/workspaces/collision-eda/dbt', 'static_parser': 'True'}
+[0m09:14:51.116939 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': '07c97b6c-0f8c-43ad-a249-85cd49bcef61', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974e421550>]}
+[0m09:14:51.117630 [info ] [MainThread]: Warning: No packages were found in packages.yml
+[0m09:14:51.118366 [debug] [MainThread]: Command `dbt deps` succeeded at 09:14:51.118179 after 0.06 seconds
+[0m09:14:51.118904 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974fa16400>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974e370be0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974e3e9730>]}
+[0m09:14:51.119432 [debug] [MainThread]: Flushing usage events

@@ -103,7 +103,7 @@ def setup_metabase(credentials):
     mb_login, mb_pass = credentials[0], credentials[1]
     
     try:
-        mb = Metabase_API('http://localhost:3001/', mb_login, mb_pass)
+        mb = Metabase_API('http://metabase-app:3000', mb_login, mb_pass)
         print("Metabase connection successful.")
     except Exception as e:
         print(f"Metabase connection failed: {e}")
