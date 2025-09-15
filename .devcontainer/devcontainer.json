@@ -1,7 +1,8 @@
 {
   "name": "Data Engineering Pipeline",
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "Dockerfile",
+    "context": ".."
   },
   
   "features": {
