@@ -1,0 +1,705 @@
+================================================================================
+NYC MOTOR VEHICLE COLLISION ANALYSIS PIPELINE - COMBINED CODE
+================================================================================
+
+This file contains all code from the collision-eda directory combined into a single file.
+Each file is separated by clear headers for easy navigation.
+
+================================================================================
+FILE: docker-compose.yml
+================================================================================
+services:
+  app:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - .:/workspace:cached
+    command: sleep infinity
+    depends_on:
+      - pgdatabase
+
+  pgdatabase:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=MVC_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  metabase-app:
+    image: metabase/metabase:v0.45.1
+    ports:
+      - "3001:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: MVC_db
+      MB_DB_PORT: 5432
+      MB_DB_USER: root
+      MB_DB_PASS: root
+      MB_DB_HOST: pgdatabase
+    depends_on:
+      - pgdatabase
+
+volumes:
+  pg_data:
+
+================================================================================
+FILE: pipeline_set.py
+================================================================================
+from sqlalchemy.types import Integer, Date, Time, Text
+
+# URLs for datasets
+url_C = "https://data.cityofnewyork.us/api/views/h9gi-nx95/rows.csv?accessType=DOWNLOAD"
+url_V = "https://data.cityofnewyork.us/api/views/bm4k-52h4/rows.csv?accessType=DOWNLOAD"
+url_P = "https://data.cityofnewyork.us/api/views/f55k-p6yu/rows.csv?accessType=DOWNLOAD"
+
+# --- Schema and Column Definitions for 'Crashes' (C) ---
+sel_C = [
+    "COLLISION_ID", "CRASH DATE", "CRASH TIME", "BOROUGH",
+    "NUMBER OF PERSONS INJURED", "NUMBER OF PERSONS KILLED",
+    "VEHICLE TYPE CODE 1", "CONTRIBUTING FACTOR VEHICLE 1",
+    "VEHICLE TYPE CODE 2", "CONTRIBUTING FACTOR VEHICLE 2",
+    "VEHICLE TYPE CODE 3", "CONTRIBUTING FACTOR VEHICLE 3",
+    "VEHICLE TYPE CODE 4", "CONTRIBUTING FACTOR VEHICLE 4"
+]
+
+sel_rename_C = {
+    "COLLISION_ID": "collision_id", "CRASH DATE": "crash_date", "CRASH TIME": "crash_time",
+    "BOROUGH": "borough", "NUMBER OF PERSONS INJURED": "injured", "NUMBER OF PERSONS KILLED": "killed",
+    "CONTRIBUTING FACTOR VEHICLE 1": "contr_f_vhc_1", "VEHICLE TYPE CODE 1": "vhc_1_code",
+    "CONTRIBUTING FACTOR VEHICLE 2": "contr_f_vhc_2", "VEHICLE TYPE CODE 2": "vhc_2_code",
+    "CONTRIBUTING FACTOR VEHICLE 3": "contr_f_vhc_3", "VEHICLE TYPE CODE 3": "vhc_3_code",
+    "CONTRIBUTING FACTOR VEHICLE 4": "contr_f_vhc_4", "VEHICLE TYPE CODE 4": "vhc_4_code"
+}
+
+sel_types_C = {
+    "collision_id": Integer(), "crash_date": Date(), "crash_time": Time(), "borough": Text(),
+    "injured": Integer(), "killed": Integer(), "vhc_1_code": Text(), "contr_f_vhc_1": Text(),
+    "vhc_2_code": Text(), "contr_f_vhc_2": Text(), "vhc_3_code": Text(), "contr_f_vhc_3": Text(),
+    "vhc_4_code": Text(), "contr_f_vhc_4": Text()
+}
+
+# --- Schema and Column Definitions for 'Vehicles' (V) ---
+sel_V = [
+    "UNIQUE_ID", "COLLISION_ID", "CRASH_DATE", "CRASH_TIME", "VEHICLE_TYPE", "VEHICLE_DAMAGE",
+    "DRIVER_SEX", "DRIVER_LICENSE_STATUS", "VEHICLE_YEAR", "VEHICLE_OCCUPANTS",
+    "STATE_REGISTRATION", "CONTRIBUTING_FACTOR_1"
+]
+
+sel_rename_V = {
+    "UNIQUE_ID": "unique_id", "COLLISION_ID": "collision_id", "CRASH_DATE": "crash_date",
+    "CRASH_TIME": "crash_time", "STATE_REGISTRATION": "state_reg", "VEHICLE_TYPE": "vhc_type",
+    "VEHICLE_YEAR": "vhc_year", "VEHICLE_OCCUPANTS": "vhc_occupants", "DRIVER_SEX": "dr_sex",
+    "DRIVER_LICENSE_STATUS": "dr_lic_status", "VEHICLE_DAMAGE": "vhc_dmg", "CONTRIBUTING_FACTOR_1": "contr_f"
+}
+
+sel_types_V = {
+    "unique_id": Integer(), "collision_id": Integer(), "crash_date": Date(), "crash_time": Time(),
+    "vhc_type": Text(), "vhc_dmg": Text(), "dr_sex": Text(), "dr_lic_status": Text(),
+    "vhc_year": Integer(), "vhc_occupants": Integer(), "state_reg": Text(), "contr_f": Text()
+}
+
+# --- Schema and Column Definitions for 'Person' (P) ---
+sel_P = [
+    "UNIQUE_ID", "COLLISION_ID", "CRASH_DATE", "CRASH_TIME", "EJECTION", "BODILY_INJURY",
+    "PERSON_INJURY", "POSITION_IN_VEHICLE", "SAFETY_EQUIPMENT", "PERSON_TYPE",
+    "PERSON_AGE", "PERSON_SEX", "EMOTIONAL_STATUS", "CONTRIBUTING_FACTOR_1"
+]
+
+sel_rename_P = {
+    "UNIQUE_ID": "unique_id", "COLLISION_ID": "collision_id", "CRASH_DATE": "crash_date",
+    "CRASH_TIME": "crash_time", "EJECTION": "ejection", "BODILY_INJURY": "body_inj",
+    "PERSON_INJURY": "person_inj", "POSITION_IN_VEHICLE": "pos_in_vhc",
+    "SAFETY_EQUIPMENT": "safety_equip", "PERSON_TYPE": "person_type", "PERSON_AGE": "age",
+    "PERSON_SEX": "sex", "EMOTIONAL_STATUS": "emot_status", "CONTRIBUTING_FACTOR_1": "contr_f"
+}
+
+sel_types_P = {
+    "unique_id": Integer(), "collision_id": Integer(), "crash_date": Date(), "crash_time": Time(),
+    "ejection": Text(), "body_inj": Text(), "person_inj": Text(), "pos_in_vhc": Text(),
+    "safety_equip": Text(), "person_type": Text(), "age": Integer(), "sex": Text(),
+    "emot_status": Text(), "contr_f": Text()
+}
+
+
+# --- Metabase Card Definitions ---
+CARD_DEFINITIONS = [
+    {
+        'name': 'Total Collisions, Vehicles, and Persons (2012-2023)',
+        'display': 'scalar',
+        'dataset_query': {
+            'type': 'native',
+            'native': {
+                'query': 'SELECT SUM(total_crashes_am) AS "Total Crashes", SUM(total_vhc_am) AS "Total Vehicles", SUM(total_person_am) AS "Total Persons" FROM "MVC_summarize".mvc_dataset_overview;'
+            }
+        }
+    },
+    {
+        'name': 'Vehicle Types Involved in Crashes',
+        'display': 'pie',
+        'dataset_query': {
+            'type': 'native',
+            'native': {
+                'query': "SELECT CASE WHEN lower(vhc_type) LIKE 'passenger vehicle' THEN 'Passenger Vehicle' WHEN lower(vhc_type) LIKE 'station wagon/sport utility vehicle' THEN 'SUV/Station Wagon' ELSE 'Other' END AS vehicle_category, SUM(vhc_type_am) as amount FROM \"MVC_summarize\".mvc_sum_all WHERE vhc_type IS NOT NULL GROUP BY vehicle_category ORDER BY amount DESC;"
+            }
+        },
+        'visualization_settings': {'pie.slice_threshold': 0.05}
+    },
+    {
+        'name': 'Top Contributing Factors to Collisions',
+        'display': 'bar',
+        'dataset_query': {
+            'type': 'native',
+            'native': {
+                'query': 'SELECT contr_f AS "Contributing Factor", SUM(contr_f_am) AS amount FROM "MVC_summarize".mvc_sum_all WHERE contr_f IS NOT NULL GROUP BY contr_f ORDER BY amount DESC LIMIT 10;'
+            }
+        }
+    },
+    {
+        'name': 'Collisions by Month (2016-2022)',
+        'display': 'line',
+        'dataset_query': {
+            'type': 'native',
+            'native': {
+                'query': 'SELECT concat("year",\'-\',TO_CHAR("month",\'fm09\')) AS "Date", SUM(all_amount) AS "Total Crashes", SUM(injured_am) AS "Crashes with Injuries" FROM "MVC_summarize".mvc_crashes_per_hour WHERE "year" BETWEEN 2016 AND 2022 GROUP BY "Date" ORDER BY "Date";'
+            }
+        }
+    }
+]
+
+================================================================================
+FILE: pipeline.py
+================================================================================
+import os
+import pandas as pd
+from time import time
+from sqlalchemy import create_engine
+from prefect import flow, task
+from prefect_sqlalchemy import SqlAlchemyConnector
+from metabase_api import Metabase_API
+import pipeline_set
+
+@task(log_prints=True, tags=["download"])
+def download_data(data_type):
+    """Downloads data based on the selected type or prepares for other actions."""
+    if data_type in ["check", "metabase"]:
+        return (data_type, data_type)
+
+    if data_type.endswith(" reload"):
+        data_type = data_type.split()[0]
+
+    if data_type in ["C", "V", "P"]:
+        url = getattr(pipeline_set, f"url_{data_type}")
+        csv_name = f"MVC_{data_type}.csv"
+        os.system(f"wget {url} -O {csv_name}")
+        return (csv_name, data_type)
+    else:
+        return ("err", None)
+
+@task(log_prints=True, tags=["setup"])
+def setup_tables_and_engine(csv_name, years, data_type):
+    """Creates database tables with the correct schema before loading data."""
+    df = pd.read_csv(csv_name, nrows=1, low_memory=False)
+    df = df[getattr(pipeline_set, f"sel_{data_type}")]
+    df.rename(columns=(getattr(pipeline_set, f"sel_rename_{data_type}")), inplace=True)
+
+    connection_block = SqlAlchemyConnector.load("psgres-connector")
+    engine = connection_block.get_connection(begin=False)
+
+    for i in years:
+        df.head(n=0).to_sql(
+            name=f"MVC_{data_type}_{i}",
+            con=engine,
+            dtype=(getattr(pipeline_set, f"sel_types_{data_type}")),
+            if_exists='replace'
+        )
+    return engine
+
+@task(log_prints=True, tags=["transform-load"])
+def transform_and_load(years, csv_name, engine, data_type):
+    """Transforms and loads data in chunks into the PostgreSQL database."""
+    total_rows_loaded = 0
+    start_time = time()
+    df_iter = pd.read_csv(csv_name, iterator=True, chunksize=100000, low_memory=False)
+
+    for df_chunk in df_iter:
+        df = df_chunk[getattr(pipeline_set, f"sel_{data_type}")]
+        df.rename(columns=(getattr(pipeline_set, f"sel_rename_{data_type}")), inplace=True)
+        df.crash_date = pd.to_datetime(df.crash_date, errors='coerce').dt.date
+        df.crash_time = pd.to_datetime(df.crash_time, format='%H:%M', errors='coerce').dt.time
+
+        df.dropna(subset=['crash_date'], inplace=True)
+
+        for year in years:
+            df_temp = df.loc[pd.to_datetime(df.crash_date).dt.year == year]
+            if not df_temp.empty:
+                df_temp.to_sql(name=f"MVC_{data_type}_{year}", con=engine, if_exists='append', index=False)
+                total_rows_loaded += len(df_temp)
+
+        print(f"Loaded {total_rows_loaded} rows. Total time: {time() - start_time:.2f} seconds.")
+
+    print("Finished ingesting data into the PostgreSQL database.")
+
+@task(log_prints=True, tags=["check"])
+def check_downloaded_data():
+    """Checks and reports the row counts for each table in the database."""
+    connection_block = SqlAlchemyConnector.load("psgres-connector")
+    engine = connection_block.get_connection(begin=False)
+
+    report = [['year', 'Crashes', 'Vehicles', 'Person']]
+    for year in range(2012, 2024):
+        row = [year]
+        for data_type in ["C", "V", "P"]:
+            try:
+                count = pd.read_sql_query(f'SELECT COUNT(*) FROM "MVC_{data_type}_{year}"', con=engine).iloc[0, 0]
+                row.append(int(count))
+            except Exception:
+                row.append(0)
+        report.append(row)
+
+    # Format and print the report
+    header = f"{report[0][0]:>11}{report[0][1]:>11}{report[0][2]:>11}{report[0][3]:>11}"
+    print("\n   Downloaded data report:\n")
+    print(header)
+    totals = [0, 0, 0]
+    for row_data in report[1:]:
+        print(f"{row_data[0]:>11}{f'{row_data[1]:,}':>11}{f'{row_data[2]:,}':>11}{f'{row_data[3]:,}':>11}")
+        totals[0] += row_data[1]
+        totals[1] += row_data[2]
+        totals[2] += row_data[3]
+    print(f"\n{'total':>11}{f'{totals[0]:,}':>11}{f'{totals[1]:,}':>11}{f'{totals[2]:,}':>11}")
+
+@task(log_prints=True, tags=["metabase"])
+def setup_metabase(credentials):
+    """Connects to Metabase and automatically creates the dashboard and cards."""
+    mb_login, mb_pass = credentials[0], credentials[1]
+
+    try:
+        mb = Metabase_API('http://localhost:3001/', mb_login, mb_pass)
+        print("Metabase connection successful.")
+    except Exception as e:
+        print(f"Metabase connection failed: {e}")
+        return
+
+    try:
+        db_id = mb.get_item_id('database', "MVC_db")
+        print("Database 'MVC_db' found.")
+    except Exception:
+        print("Database 'MVC_db' not found. Please connect it in Metabase first.")
+        return
+
+    try:
+        collection_id = mb.get_item_id('collection', "MVC_collection")
+        print("Collection 'MVC_collection' already exists.")
+    except Exception:
+        mb.create_collection("MVC_collection", parent_collection_name='Root')
+        collection_id = mb.get_item_id('collection', "MVC_collection")
+        print("Collection 'MVC_collection' created.")
+
+    # Create or update cards
+    for card_details in pipeline_set.CARD_DEFINITIONS:
+        card_details['dataset_query']['database'] = db_id
+        card_name = card_details['name']
+        try:
+            # Delete if exists to ensure it's up to date
+            mb.delete_item('card', item_name=card_name, collection_name="MVC_collection")
+            print(f"Deleted existing card: {card_name}")
+        except Exception:
+            pass # Card didn't exist, which is fine
+
+        mb.create_card(custom_json=card_details, collection_id=collection_id)
+        print(f"Card '{card_name}' created/updated.")
+
+@flow(
+    name="MVC_main",
+    description="Main flow to download, process, and load NYC Motor Vehicle Collision data."
+)
+def MVC_main(data_type: str, years: list):
+    """
+    Main pipeline flow.
+    - data_type: 'C', 'V', 'P', 'check', or 'metabase'.
+    - years: List of years to process, or Metabase credentials.
+    """
+    csv_name, data_type_processed = download_data(data_type)
+
+    if csv_name == "err":
+        print("Error: Invalid data_type specified.")
+    elif csv_name == "check":
+        check_downloaded_data()
+    elif csv_name == "metabase":
+        setup_metabase(years)
+    else:
+        engine = setup_tables_and_engine(csv_name, years, data_type_processed)
+        transform_and_load(years, csv_name, engine, data_type_processed)
+
+if __name__ == '__main__':
+    # Example run configuration
+    DATA_TYPE = "C"  # Options: "C", "V", "P"
+    YEARS_TO_PROCESS = [2022, 2023]
+    MVC_main(data_type=DATA_TYPE, years=YEARS_TO_PROCESS)
+
+================================================================================
+FILE: prefect.yml
+================================================================================
+prefect-version: 2.7.7
+name: nyc-collision-pipeline
+prefect-version: 2.7.7
+
+deployments:
+  - name: MVC_flow
+    flow_path: pipeline.py
+    entrypoint: pipeline.py:MVC_main
+    work_queue_name: default
+    parameters:
+      data_type: "C"
+      years:
+        - 2023
+
+================================================================================
+FILE: README.md
+================================================================================
+# NYC Motor Vehicle Collision Analysis Pipeline
+
+This project provides an end-to-end data pipeline for analyzing NYC Motor Vehicle Collision data. It automates data ingestion, transformation, and visualization using Docker, Prefect, dbt, and Metabase.
+
+## Easiest Way to Run: GitHub Codespaces
+
+You can run this entire project in your browser with a single click, without installing anything on your computer.
+
+1.  **Open in Codespace**: Click the "Code" button on this repository page, go to the "Codespaces" tab, and click "Create codespace on main". This will set up a complete, ready-to-run environment for you.
+
+2.  **Run the Setup Script**: Once the Codespace is ready, a terminal will open. Run the main script:
+    ```bash
+    ./run.sh
+    ```
+This script handles everything: starting services, ingesting and processing all the data (this will take some time), running the dbt models, and preparing Metabase.
+
+## The Final Step: View Your Dashboard
+
+The `run.sh` script will provide you with a URL for Metabase.
+
+-   Open the URL and create your admin account.
+-   When prompted to add a database, use the following settings:
+    -   **Database type**: `PostgreSQL`
+    -   **Display name**: `MVC_db`
+    -   **Host**: `pgdatabase`
+    -   **Port**: `5432`
+    -   **Database name**: `MVC_db`
+    -   **Database username**: `root`
+    -   **Database password**: `root`
+-   Click **Save**. Your dashboard will be automatically created and visible in the **"MVC_collection"**.
+
+## Alternative: Running Locally
+
+If you prefer to run this on your own machine:
+1.  Ensure you have **Docker** and **Docker Compose** installed and running.
+2.  Clone the repository.
+3.  Open a terminal (like Git Bash or WSL) and run the setup script:
+    ```bash
+    ./run.sh
+    ```
+4.  Follow the same final step above to connect Metabase.
+
+================================================================================
+FILE: requirements.txt
+================================================================================
+pandas==1.5.2
+prefect==2.7.7
+prefect-sqlalchemy==0.2.2
+psycopg2-binary==2.9.5
+sqlalchemy==1.4.46
+metabase-api==1.2.1
+dbt-postgres==1.5.0
+
+================================================================================
+FILE: run.sh
+================================================================================
+#!/bin/bash
+set -e
+
+echo "🚀 Starting the end-to-end data pipeline setup..."
+
+# Step 1: Start all services in the background
+echo "--- Starting Docker services (Postgres, Metabase)..."
+docker-compose up -d --build
+
+# Step 2: Start Prefect and set up the block
+echo "--- Starting Prefect Orion..."
+prefect orion start &
+sleep 10 # Wait for Orion to be ready
+echo "--- Setting up Prefect SQLAlchemy block..."
+python -c "from prefect_sqlalchemy import SqlAlchemyConnector; SqlAlchemyConnector(url='postgresql+psycopg2://root:root@pgdatabase:5432/MVC_db').save('psgres-connector', overwrite=True)"
+
+# Step 3: Deploy the Prefect flow
+echo "--- Deploying Prefect flow..."
+prefect deploy --all
+
+# Step 4: Run the data ingestion for all datasets
+YEARS_JSON="[2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]"
+echo "--- Starting data ingestion for Crashes (C)..."
+prefect deployment run 'MVC_main/MVC_flow' --param "data_type=C" --param "years=$YEARS_JSON"
+
+echo "--- Starting data ingestion for Vehicles (V)..."
+prefect deployment run 'MVC_main/MVC_flow' --param "data_type=V" --param "years=$YEARS_JSON"
+
+echo "--- Starting data ingestion for Persons (P)..."
+prefect deployment run 'MVC_main/MVC_flow' --param "data_type=P" --param "years=$YEARS_JSON"
+
+# Step 5: Run dbt models
+echo "--- Running dbt models to transform data..."
+cd dbt
+dbt deps
+dbt run
+dbt run --select mvc_sum_all # Run final model again to ensure dependencies are met
+cd ..
+
+# Step 6: Final instructions for Metabase
+echo "✅ Pipeline setup is complete!"
+echo "-----------------------------------------------------"
+echo "👉 Your final step is to set up Metabase:"
+echo "1. Open Metabase: http://localhost:3001 (or find the forwarded port in your Codespace)"
+echo "2. Create your admin account."
+echo "3. Connect to the database with these settings:"
+echo "   - Host: pgdatabase"
+echo "   - Port: 5432"
+echo "   - Database name: MVC_db"
+echo "   - Database username: root"
+echo "   - Database password: root"
+echo ""
+echo "After connecting, trigger dashboard creation with:"
+echo "prefect deployment run 'MVC_main/MVC_flow' --param 'data_type=metabase' --param 'years=[\"YOUR_EMAIL\", \"YOUR_PASSWORD\"]'"
+echo "-----------------------------------------------------"
+
+================================================================================
+FILE: dbt/dbt_project.yml
+================================================================================
+name: 'MVC_dbt_local'
+version: '1.0.0'
+config-version: 2
+
+profile: 'MVC_dbt_local'
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  MVC_dbt_local:
+    MVC_summarize:
+      +materialized: table
+      +schema: MVC_summarize
+
+================================================================================
+FILE: dbt/profiles.yml
+================================================================================
+MVC_dbt_local:
+  outputs:
+    dev:
+      type: postgres
+      threads: 4
+      host: localhost
+      port: 5432
+      user: root
+      pass: root
+      dbname: MVC_db
+      schema: public
+  target: dev
+
+================================================================================
+FILE: dbt/models/MVC_summarize/mvc_crashes_per_hour.sql
+================================================================================
+{{ config(materialized='table') }}
+
+{% set years = range(2012, 2024) %}
+
+WITH all_crashes AS (
+    {% for year in years %}
+    SELECT
+        crash_date,
+        crash_time,
+        injured,
+        killed
+    FROM {{ source('public', 'MVC_C_' ~ year) }}
+    {% if not loop.last %}UNION ALL{% endif %}
+    {% endfor %}
+)
+SELECT
+    CAST(date_part('year', crash_date) AS INTEGER) AS "year",
+    CAST(date_part('month', crash_date) AS INTEGER) AS "month",
+    CAST(date_part('hour', crash_time) AS INTEGER) AS "hour",
+    CONCAT(
+        TO_CHAR(date_part('hour', crash_time), 'fm00'), ':00 - ',
+        TO_CHAR(date_part('hour', crash_time), 'fm00'), ':59'
+    ) AS time_interval,
+    COUNT(*) AS all_amount,
+    SUM(COALESCE(injured, 0)) AS injured_am,
+    SUM(COALESCE(killed, 0)) AS killed_am
+FROM all_crashes
+GROUP BY 1, 2, 3, 4
+ORDER BY 1, 2, 3
+
+================================================================================
+FILE: dbt/models/MVC_summarize/mvc_dataset_overview.sql
+================================================================================
+{{ config(materialized='table') }}
+
+{% set years = range(2012, 2024) %}
+
+WITH crashes AS (
+    {% for year in years %}
+    SELECT collision_id, date_part('year', crash_date) as "year", borough, contr_f_vhc_1 FROM {{ source('public', 'MVC_C_' ~ year) }}
+    {% if not loop.last %}UNION ALL{% endif %}
+    {% endfor %}
+),
+vehicles AS (
+    {% for year in years %}
+    SELECT collision_id, date_part('year', crash_date) as "year", vhc_type, vhc_year, dr_lic_status FROM {{ source('public', 'MVC_V_' ~ year) }}
+    {% if not loop.last %}UNION ALL{% endif %}
+    {% endfor %}
+),
+persons AS (
+    {% for year in years %}
+    SELECT collision_id, date_part('year', crash_date) as "year", age, sex FROM {{ source('public', 'MVC_P_' ~ year) }}
+    {% if not loop.last %}UNION ALL{% endif %}
+    {% endfor %}
+),
+yearly_stats AS (
+    SELECT
+        "year",
+        COUNT(DISTINCT collision_id) AS total_crashes_am,
+        COUNT(collision_id) AS total_records_c,
+        SUM(CASE WHEN borough IS NULL THEN 1 ELSE 0 END) AS no_borough_data,
+        SUM(CASE WHEN contr_f_vhc_1 IS NULL THEN 1 ELSE 0 END) AS no_contr_f_data
+    FROM crashes
+    GROUP BY "year"
+),
+vehicle_stats AS (
+    SELECT
+        "year",
+        COUNT(DISTINCT collision_id) AS crashes_with_vehicles_am,
+        COUNT(collision_id) AS total_vhc_am,
+        SUM(CASE WHEN vhc_type IS NULL THEN 1 ELSE 0 END) AS no_vhc_type_data
+    FROM vehicles
+    GROUP BY "year"
+),
+person_stats AS (
+    SELECT
+        "year",
+        COUNT(DISTINCT collision_id) AS crashes_with_persons_am,
+        COUNT(collision_id) AS total_person_am,
+        SUM(CASE WHEN age IS NULL THEN 1 ELSE 0 END) AS no_age_data,
+        SUM(CASE WHEN sex IS NULL OR sex = 'U' THEN 1 ELSE 0 END) AS no_sex_data
+    FROM persons
+    GROUP BY "year"
+)
+SELECT
+    y."year",
+    y.total_crashes_am,
+    COALESCE(v.total_vhc_am, 0) as total_vhc_am,
+    COALESCE(p.total_person_am, 0) as total_person_am,
+    (y.total_crashes_am - COALESCE(v.crashes_with_vehicles_am, 0)) AS no_vhc_data_am,
+    ROUND(100.0 * (y.total_crashes_am - COALESCE(v.crashes_with_vehicles_am, 0)) / y.total_crashes_am, 2) AS "no_vhc_data_%",
+    (y.total_crashes_am - COALESCE(p.crashes_with_persons_am, 0)) AS no_person_data_am,
+    ROUND(100.0 * (y.total_crashes_am - COALESCE(p.crashes_with_persons_am, 0)) / y.total_crashes_am, 2) AS "no_person_data_%",
+    y.no_borough_data,
+    ROUND(100.0 * y.no_borough_data / y.total_records_c, 2) AS "no_borough_data_%",
+    y.no_contr_f_data,
+    ROUND(100.0 * y.no_contr_f_data / y.total_records_c, 2) AS "no_contr_f_data_%",
+    COALESCE(v.no_vhc_type_data, 0) AS no_vhc_type_data,
+    ROUND(CASE WHEN v.total_vhc_am > 0 THEN 100.0 * v.no_vhc_type_data / v.total_vhc_am ELSE 0 END, 2) AS "no_vhc_type_data_%",
+    COALESCE(p.no_age_data, 0) AS no_age_data,
+    ROUND(CASE WHEN p.total_person_am > 0 THEN 100.0 * p.no_age_data / p.total_person_am ELSE 0 END, 2) AS "no_age_data_%",
+    COALESCE(p.no_sex_data, 0) AS no_sex_data,
+    ROUND(CASE WHEN p.total_person_am > 0 THEN 100.0 * p.no_sex_data / p.total_person_am ELSE 0 END, 2) AS "no_sex_data_%"
+FROM yearly_stats y
+LEFT JOIN vehicle_stats v ON y."year" = v."year"
+LEFT JOIN person_stats p ON y."year" = p."year"
+ORDER BY y."year"
+
+================================================================================
+FILE: dbt/models/MVC_summarize/mvc_sum_all.sql
+================================================================================
+{{ config(materialized='table') }}
+
+{% set years = range(2012, 2024) %}
+
+WITH all_data AS (
+    {% for year in years %}
+    (SELECT
+        {{ year }} AS "year",
+        injured,
+        COUNT(*) AS inj_am,
+        NULL AS killed, NULL AS killed_am,
+        borough, COUNT(*) AS borough_am,
+        vhc_1_code AS vhc_type, COUNT(*) AS vhc_type_am,
+        contr_f_vhc_1 AS contr_f, COUNT(*) as contr_f_am
+     FROM {{ source('public', 'MVC_C_' ~ year) }}
+     GROUP BY injured, borough, vhc_1_code, contr_f_vhc_1)
+    {% if not loop.last %}UNION ALL{% endif %}
+    {% endfor %}
+)
+SELECT
+    "year",
+    injured, inj_am,
+    killed, killed_am,
+    borough, borough_am,
+    vhc_type, vhc_type_am,
+    contr_f, contr_f_am
+FROM all_data
+
+================================================================================
+FILE: dbt/models/MVC_summarize/schema.yml
+================================================================================
+version: 2
+
+sources:
+  - name: public
+    database: MVC_db
+    schema: public
+    tables:
+      - name: MVC_C_2012
+      - name: MVC_C_2013
+      - name: MVC_C_2014
+      - name: MVC_C_2015
+      - name: MVC_C_2016
+      - name: MVC_C_2017
+      - name: MVC_C_2018
+      - name: MVC_C_2019
+      - name: MVC_C_2020
+      - name: MVC_C_2021
+      - name: MVC_C_2022
+      - name: MVC_C_2023
+      - name: MVC_V_2012
+      - name: MVC_V_2013
+      - name: MVC_V_2014
+      - name: MVC_V_2015
+      - name: MVC_V_2016
+      - name: MVC_V_2017
+      - name: MVC_V_2018
+      - name: MVC_V_2019
+      - name: MVC_V_2020
+      - name: MVC_V_2021
+      - name: MVC_V_2022
+      - name: MVC_V_2023
+      - name: MVC_P_2012
+      - name: MVC_P_2013
+      - name: MVC_P_2014
+      - name: MVC_P_2015
+      - name: MVC_P_2016
+      - name: MVC_P_2017
+      - name: MVC_P_2018
+      - name: MVC_P_2019
+      - name: MVC_P_2020
+      - name: MVC_P_2021
+      - name: MVC_P_2022
+      - name: MVC_P_2023
+
+================================================================================
+END OF COMBINED CODE FILE
+================================================================================

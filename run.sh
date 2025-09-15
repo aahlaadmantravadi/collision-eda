@@ -10,8 +10,9 @@ docker-compose up -d --build
 # Step 2: Start Prefect and set up the block
 echo "--- Starting Prefect Orion..."
 prefect orion start &
-sleep 10 # Wait for Orion to be ready
-echo "--- Setting up Prefect SQLAlchemy block..."
+# Wait for Orion to be ready
+sleep 15
+echo "--- Setting up Prefect SQLAlchemy block for Postgres..."
 python -c "from prefect_sqlalchemy import SqlAlchemyConnector; SqlAlchemyConnector(url='postgresql+psycopg2://root:root@pgdatabase:5432/MVC_db').save('psgres-connector', overwrite=True)"
 
 # Step 3: Deploy the Prefect flow
@@ -19,8 +20,9 @@ echo "--- Deploying Prefect flow..."
 prefect deploy --all
 
 # Step 4: Run the data ingestion for all datasets
+# This is the longest part of the process.
 YEARS_JSON="[2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]"
-echo "--- Starting data ingestion for Crashes (C)..."
+echo "--- Starting data ingestion for Crashes (C). This may take several minutes..."
 prefect deployment run 'MVC_main/MVC_flow' --param "data_type=C" --param "years=$YEARS_JSON"
 
 echo "--- Starting data ingestion for Vehicles (V)..."
@@ -30,26 +32,34 @@ echo "--- Starting data ingestion for Persons (P)..."
 prefect deployment run 'MVC_main/MVC_flow' --param "data_type=P" --param "years=$YEARS_JSON"
 
 # Step 5: Run dbt models
-echo "--- Running dbt models to transform data..."
+echo "--- Running dbt models to transform data in the warehouse..."
 cd dbt
 dbt deps
 dbt run
 dbt run --select mvc_sum_all # Run final model again to ensure dependencies are met
 cd ..
 
-# Step 6: Final instructions for Metabase
-echo "✅ Pipeline setup is complete!"
+# Step 6: Final instructions and automated Metabase setup
+echo "✅ Data pipeline is complete!"
 echo "-----------------------------------------------------"
-echo "👉 Your final step is to set up Metabase:"
-echo "1. Open Metabase: http://localhost:3001 (or find the forwarded port in your Codespace)"
-echo "2. Create your admin account."
-echo "3. Connect to the database with these settings:"
-echo "   - Host: pgdatabase"
-echo "   - Port: 5432"
-echo "   - Database name: MVC_db"
-echo "   - Database username: root"
-echo "   - Database password: root"
+echo "👉 Now, let's set up the Metabase dashboard."
+echo "1. Open Metabase: In the 'PORTS' tab below, click the Globe icon next to port 3001."
+echo "2. In the browser tab that opens, create your admin account. Use a simple password you can remember."
+echo "3. Come back to this terminal when you are done."
 echo ""
-echo "After connecting, trigger dashboard creation with:"
-echo "prefect deployment run 'MVC_main/MVC_flow' --param 'data_type=metabase' --param 'years=[\"YOUR_EMAIL\", \"YOUR_PASSWORD\"]'"
+
+# Prompt user for their Metabase credentials
+read -p "Enter the email you used for Metabase admin: " METABASE_EMAIL
+read -sp "Enter the password you used for Metabase admin: " METABASE_PASSWORD
+echo ""
+
+echo "--- Connecting Metabase to the database and building your dashboard..."
+
+# Give Metabase a moment to be fully ready after user setup
+sleep 10
+
+# Run the Prefect flow to set up Metabase
+prefect deployment run 'MVC_main/MVC_flow' --param "data_type=metabase" --param "years=[\"$METABASE_EMAIL\", \"$METABASE_PASSWORD\"]"
+
+echo "🎉 All done! Your dashboard is ready in the 'MVC_collection' in Metabase."
 echo "-----------------------------------------------------"
