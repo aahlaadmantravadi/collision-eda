@@ -1,21 +1,15 @@
-FROM python:3.9-slim
+FROM mcr.microsoft.com/devcontainers/python:3.9
 
+# Set the working directory
 WORKDIR /workspace
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    build-essential \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set up a non-root user with a home directory
-RUN useradd -m -s /bin/bash vscode
+# Switch to a non-root user
 USER vscode
 
-# Install Python packages as the non-root user
+# Copy requirements and install python packages
 COPY --chown=vscode:vscode requirements.txt .
 RUN pip install --user -r requirements.txt
 ENV PATH="/home/vscode/.local/bin:${PATH}"
 
+# Copy the rest of the project files
 COPY --chown=vscode:vscode . .
