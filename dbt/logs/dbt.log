@@ -20,3 +20,14 @@
 [0m09:14:51.118366 [debug] [MainThread]: Command `dbt deps` succeeded at 09:14:51.118179 after 0.06 seconds
 [0m09:14:51.118904 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974fa16400>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974e370be0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b974e3e9730>]}
 [0m09:14:51.119432 [debug] [MainThread]: Flushing usage events
+[0m09:27:42.914079 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7371e8cea370>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7371e76f2d60>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7371e76f25b0>]}
+
+
+============================== 09:27:42.921360 | e6e83c05-8a5a-4cd8-9242-ab1a1a6716f4 ==============================
+[0m09:27:42.921360 [info ] [MainThread]: Running with dbt=1.5.0
+[0m09:27:42.922297 [debug] [MainThread]: running dbt with arguments {'warn_error_options': 'WarnErrorOptions(include=[], exclude=[])', 'log_format': 'default', 'quiet': 'False', 'send_anonymous_usage_stats': 'True', 'profiles_dir': '/workspaces/collision-eda/dbt', 'printer_width': '80', 'no_print': 'None', 'log_path': '/workspaces/collision-eda/dbt/logs', 'log_cache_events': 'False', 'target_path': 'None', 'debug': 'False', 'use_colors': 'True', 'indirect_selection': 'eager', 'partial_parse': 'True', 'static_parser': 'True', 'fail_fast': 'False', 'write_json': 'True', 'version_check': 'True', 'use_experimental_parser': 'False', 'warn_error': 'None', 'cache_selected_only': 'False', 'introspect': 'True'}
+[0m09:27:42.955988 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': 'e6e83c05-8a5a-4cd8-9242-ab1a1a6716f4', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7371e76f25b0>]}
+[0m09:27:42.956649 [info ] [MainThread]: Warning: No packages were found in packages.yml
+[0m09:27:42.957381 [debug] [MainThread]: Command `dbt deps` succeeded at 09:27:42.957180 after 0.06 seconds
+[0m09:27:42.958026 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7371e8cea370>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7371e76f25b0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7371eb085400>]}
+[0m09:27:42.958527 [debug] [MainThread]: Flushing usage events

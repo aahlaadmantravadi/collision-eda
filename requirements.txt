@@ -7,3 +7,5 @@ metabase-api==3.5.2
 dbt-postgres==1.5.0
 pydantic<2
 griffe==0.26.0
+apprise==0.9.9
+anyio<4

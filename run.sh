@@ -5,14 +5,15 @@ echo "🚀 Starting the end-to-end data pipeline setup..."
 
 # Step 1: Start all services in the background
 echo "--- Starting Docker services (Postgres, Metabase)..."
-docker compose up -d --build
+docker compose up -d
 
 # Step 2: Start Prefect and set up the block
 echo "--- Starting Prefect Orion..."
 prefect orion start &
 sleep 15 # Wait a bit longer for Orion to be fully ready
 echo "--- Setting up Prefect SQLAlchemy block for Postgres..."
-python -c "from prefect_sqlalchemy import SqlAlchemyConnector; SqlAlchemyConnector(url='postgresql+psycopg2://root:root@pgdatabase:5432/MVC_db').save('psgres-connector', overwrite=True)"
+# THIS IS THE CORRECTED LINE:
+python -c "from prefect_sqlalchemy import SqlAlchemyConnector; SqlAlchemyConnector(database='MVC_db', driver='postgresql+psycopg2', username='root', password='root', host='pgdatabase', port=5432).save('psgres-connector', overwrite=True)"
 
 # Step 3: Deploy the Prefect flow
 echo "--- Deploying Prefect flow..."
