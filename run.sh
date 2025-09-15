@@ -5,13 +5,12 @@ echo "🚀 Starting the end-to-end data pipeline setup..."
 
 # Step 1: Start all services in the background
 echo "--- Starting Docker services (Postgres, Metabase)..."
-docker-compose up -d --build
+docker compose up -d --build
 
 # Step 2: Start Prefect and set up the block
 echo "--- Starting Prefect Orion..."
 prefect orion start &
-# Wait for Orion to be ready
-sleep 15
+sleep 15 # Wait a bit longer for Orion to be fully ready
 echo "--- Setting up Prefect SQLAlchemy block for Postgres..."
 python -c "from prefect_sqlalchemy import SqlAlchemyConnector; SqlAlchemyConnector(url='postgresql+psycopg2://root:root@pgdatabase:5432/MVC_db').save('psgres-connector', overwrite=True)"
 
@@ -20,7 +19,6 @@ echo "--- Deploying Prefect flow..."
 prefect deploy --all
 
 # Step 4: Run the data ingestion for all datasets
-# This is the longest part of the process.
 YEARS_JSON="[2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]"
 echo "--- Starting data ingestion for Crashes (C). This may take several minutes..."
 prefect deployment run 'MVC_main/MVC_flow' --param "data_type=C" --param "years=$YEARS_JSON"
@@ -39,13 +37,13 @@ dbt run
 dbt run --select mvc_sum_all # Run final model again to ensure dependencies are met
 cd ..
 
-# Step 6: Final instructions and automated Metabase setup
+# Step 6: Final instructions for Metabase
 echo "✅ Data pipeline is complete!"
 echo "-----------------------------------------------------"
-echo "👉 Now, let's set up the Metabase dashboard."
+echo "👉 Your final step is to set up Metabase:"
 echo "1. Open Metabase: In the 'PORTS' tab below, click the Globe icon next to port 3001."
-echo "2. In the browser tab that opens, create your admin account. Use a simple password you can remember."
-echo "3. Come back to this terminal when you are done."
+echo "2. In the browser tab that opens, create your admin account."
+echo "3. Come back to this terminal and follow the prompts."
 echo ""
 
 # Prompt user for their Metabase credentials
@@ -54,9 +52,7 @@ read -sp "Enter the password you used for Metabase admin: " METABASE_PASSWORD
 echo ""
 
 echo "--- Connecting Metabase to the database and building your dashboard..."
-
-# Give Metabase a moment to be fully ready after user setup
-sleep 10
+sleep 10 # Give Metabase a moment to be fully ready
 
 # Run the Prefect flow to set up Metabase
 prefect deployment run 'MVC_main/MVC_flow' --param "data_type=metabase" --param "years=[\"$METABASE_EMAIL\", \"$METABASE_PASSWORD\"]"

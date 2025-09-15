@@ -3,7 +3,7 @@ MVC_dbt_local:
     dev:
       type: postgres
       threads: 4
-      host: pgdatabase  # <-- CORRECTED: Use service name, not localhost
+      host: pgdatabase
       port: 5432
       user: root
       pass: root
