@@ -1,8 +1,16 @@
+# Core Data & Orchestration
 pandas==1.5.2
-prefect==2.10.21
+prefect==2.14.21
 prefect-sqlalchemy==0.2.2
-psycopg2-binary==2.9.5
 sqlalchemy==1.4.46
-metabase-api==3.5.2
+
+# Database & dbt
+psycopg2-binary==2.9.5
 dbt-postgres==1.5.0
+
+# API & Visualization
+metabase-api==3.5.2
+requests==2.31.0
+
+# Prefect v2.14.21 Dependencies
 pydantic<2
