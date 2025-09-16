@@ -12,5 +12,8 @@ dbt-postgres==1.5.0
 metabase-api==3.5.2
 requests==2.31.0
 
-# Prefect v2.14.21 Dependencies
+#Prefect 2.14.21 
 pydantic<2
+anyio<4
+griffe==0.30.0
+typer<0.10.0
